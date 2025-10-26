@@ -1,3 +1,4 @@
+import cloudinary from '../lib/cloudinary.js'
 import { generateToken } from '../lib/utils.js'
 import User from '../models/user.model.js'
 import bcrypt from 'bcryptjs'
@@ -95,6 +96,54 @@ export const login = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server error. Please try again later.",
+        });
+    }
+};
+
+//controller to check if user is authenticated 
+
+export const checkAuth = (req, res) => {
+    res.status(400).json({
+        success: true,
+        user: req.user
+    })
+}
+//controller to update user profile details
+
+export const updateProfile = async (req, res) => {
+    try {
+        const { fullName, profilePic, bio } = req.body;
+        const userId = req.user._id;
+
+        let updatedUser;
+
+        if (!profilePic) {
+            updatedUser = await User.findByIdAndUpdate(
+                userId,
+                { fullName, bio },
+                { new: true }
+            );
+        } else {
+            const upload = await cloudinary.uploader.upload(profilePic, {
+                folder: 'user_profiles',
+            });
+
+            updatedUser = await User.findByIdAndUpdate(
+                userId,
+                { fullName, bio, profilePic: upload.secure_url },
+                { new: true }
+            );
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'User profile updated successfully',
+            user: updatedUser,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
         });
     }
 };
